@@ -10,7 +10,7 @@ instance Show Formula where
     show (Imply x y) = (show(x) ++ " Implies " ++ show(y)) 
 
 
-
+rlis :: [Int]
 formula0 :: Formula 
 formula0 = Var 'P'
 formula1:: Formula
@@ -144,25 +144,7 @@ expandFormula (Not (Or x y)) = [[Not x, Not y]]
 expandFormula (Not (And x y)) = [[Not x], [Not y]]
 
 
--- get variable 
-getVar :: Formula -> Formula
-getVar (Not formula) = formula
-getVar formula = formula
 
---check for a closed tree 
-treeIsClosed :: [Formula] -> Bool 
-treeIsClosed [] = False 
-treeIsClosed list@(x:xs)
-  | var `elem` list && (Not var `elem` list) = traceShow x True
-  | otherwise = traceShow list $ treeIsClosed xs
-    where var = getVar x 
-
--- check for closed tableaux 
-tableauxIsClosed :: [[Formula]] -> Bool 
-tableauxIsClosed [] = True 
-tableauxIsClosed (x:xs) 
-  | treeIsClosed x = tableauxIsClosed xs 
-  | otherwise = False
 
 
 
