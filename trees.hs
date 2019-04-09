@@ -3,23 +3,48 @@ module Trees where
 import Debug.Trace
 import System.Random
 -- IMPLEMENTING TABLEAUX WITH TREES 
-data Formula = Var Char | Not Formula | And Formula Formula | Or Formula Formula | Imply Formula Formula deriving Eq
+
+-- Data type for terms 
+{-
+  function in first order-logic are of the form f(X0...Xn) where f is a function symbol (a constant)
+  and X0...Xn are terms
+-}
+data Term = Const Char | Func Char [Term] deriving (Eq) 
+--Formula data type
+data Formula = Var Char |
+               Not Formula | 
+               And Formula Formula | 
+               Or Formula Formula | 
+               Imply Formula Formula | 
+               ForAll Char Formula |
+               Exist Char Formula |
+               Pred Char [Term]
+               deriving Eq
 data Direction = L | R 
 
---- Generating random formula
-alphabet = ['A'..'Z']
-createVariables :: [Char] -> [Formula]
-createVariables [] = []
-createVariables (x:xs) =  (Var x):createVariables xs
 
-rands :: (Int, Int) -> StdGen -> Int -> Int -> [Int]
+-- Calculating occurance of variables in a term
 
-rands (a,b) c counter stop
-  | counter == stop = []
-  | otherwise = (number):rands (a,b) seed  (counter + 1) stop
-      where (number,seed) = randomR (a,b) $ c
-rands4 = rands (1,4) (mkStdGen 100) 0 20
- 
+occurance :: Term -> [Char]
+occurance (Const x) = [x]
+occurance (Func x t) = occuranceA t
+
+occuranceA :: [Term] -> [Char]
+occuranceA [] = []
+occuranceA (y:ys) = occurance y++(occuranceA ys)
+
+-- Compute all Free Variables in a term
+fV :: Formula -> [Char]
+fV (Var x) = [x]
+fV (Pred x t) = occuranceA t
+fV (Not x) = fV x
+fV (Imply x y) = fV x ++ fV y
+fV (And x y) =  fV x ++ fV y
+fV (Or x y) =  fV x ++ fV y
+fV (ForAll x f) = filter (\y -> y /= x) (fV f)
+fV (Exist x f) = filter (\y -> y /= x) (fV f)
+
+-- freeVars :: Formula -> [Char]
 
 formula0 :: Formula 
 formula0 = Var 'P'
@@ -63,12 +88,18 @@ implication = Imply (Var 'P') (Var 'Q')
 implicationLong :: Formula 
 implicationLong = Imply (Var 'P') (Imply (Var 'S') (Imply (Var 'Q') (Var 'P')))
 
+instance Show Term where 
+  show (Const c) = show c
+  show (Func s ls) = show(s)++ show(ls)
 instance Show Formula where
     show (Var p) =  show p
-    show (Not x) =  ("Not " ++ show(x))
-    show (And x y) = (show(x) ++ " And " ++ show(y))
-    show (Or x y) = (show(x) ++ " Or " ++ show(y))
-    show (Imply x y) = (show(x) ++ " Implies " ++ show(y)) 
+    show (Not x) =  ("¬(" ++ show(x) ++ ")")
+    show (And x y) = ("("++show(x) ++ " ∧ " ++ show(y) ++ ")")
+    show (Or x y) = ("("++show(x) ++ " ∨ " ++ show(y)++")")
+    show (Imply x y) = ("("++show(x) ++ " -> " ++ show(y)++")") 
+    show (ForAll x y) = ("Forall"++ show(x) ++"(" ++ show(y) ++ ")")
+    show (Exist x y) = ("Exists" ++ show(x)++"(" ++ show(y) ++ ")")
+    show (Pred x y) = show(x) ++ "(" ++ show(y) ++")" 
 
 data Tree a = Empty | Node a (Tree a) (Tree a) deriving (Show, Eq)
 
@@ -190,6 +221,9 @@ createTableaux f@(Node (Lf formula expanded) l r)
 
 isTautology :: Formula -> Bool 
 isTautology formula = tableauxIsClosed $ branch $ createTableaux $ createNode formula
+
+p26 :: Formula
+p26 = Or (And (Or (And p24 p24) (And p24 p24)) (Or (And p24 p24) (And p24 p24))) (And (Or (And p24 p24) (And p24 p24)) (Or (And p24 p24) (And p24 p24))) 
 
 p24 :: Formula
 p24 = And (And (Imply (And (Or (Or (Or (Not (And (Not (Or (And (And (Imply (Var 'A') (And (Var 'A') (Var 'A'))) (Imply (Var 'A') (And (Var 'A') (Var 'A')))) (And (Imply (Var 'A') (And (Var 'A') (Var 'A'))) (Imply (Var 'A') (And (Var 'A') (Var 'A'))))) (And (And (Imply (Var 'A') (And (Var 'A') (Var 'A'))) (Imply (Var 'A') (And (Var 'A') (Var 'A')))) (And (Imply (Var 'A') (And (Var 'A') (Var 'A'))) (Imply (Var 'A') (And (Var 'A') (Var 'A'))))))) (Or (And (And (Imply (Var 'A') (And (Var 'A') (Var 'A'))) (Imply (Var 'A') (And (Var 'A') (Var 'A')))) (And (Imply (Var 'A') (And (Var 'A') (Var 'A'))) (Imply (Var 'A') (And (Var 'A') (Var 'A'))))) (And (And (Imply (Var 'A') (And (Var 'A') (Var 'A'))) (Imply (Var 'A') (And (Var 'A') (Var 'A')))) (And (Imply (Var 'A') (And (Var 'A') (Var 'A'))) (Imply (Var 'A') (And (Var 'A') (Var 'A')))))))) (Var 'C')) (And (Or (Not (And (Not (Or (And (And (Imply (Var 'A') (And (Var 'A') (Var 'A'))) (Imply (Var 'A') (And (Var 'A') (Var 'A')))) (And (Imply (Var 'A') (And (Var 'A') (Var 'A'))) (Imply (Var 'A') (And (Var 'A') (Var 'A'))))) (And (And (Imply (Var 'A') (And (Var 'A') (Var 'A'))) (Imply (Var 'A') (And (Var 'A') (Var 'A')))) (And (Imply (Var 'A') (And (Var 'A') (Var 'A'))) (Imply (Var 'A') (And (Var 'A') (Var 'A'))))))) (Or (And (And (Imply (Var 'A') (And (Var 'A') (Var 'A'))) (Imply (Var 'A') (And (Var 'A') (Var 'A')))) (And (Imply (Var 'A') (And (Var 'A') (Var 'A'))) (Imply (Var 'A') (And (Var 'A') (Var 'A'))))) (And (And (Imply (Var 'A') (And (Var 'A') (Var 'A'))) (Imply (Var 'A') (And (Var 'A') (Var 'A')))) (And (Imply (Var 'A') (And (Var 'A') (Var 'A'))) (Imply (Var 'A') (And (Var 'A') (Var 'A')))))))) (Var 'C')) (Var 'C'))) (Not (Or (Not (And (Not (Or (And (And (Imply (Var 'A') (And (Var 'A') (Var 'A'))) (Imply (Var 'A') (And (Var 'A') (Var 'A')))) (And (Imply (Var 'A') (And (Var 'A') (Var 'A'))) (Imply (Var 'A') (And (Var 'A') (Var 'A'))))) (And (And (Imply (Var 'A') (And (Var 'A') (Var 'A'))) (Imply (Var 'A') (And (Var 'A') (Var 'A')))) (And (Imply (Var 'A') (And (Var 'A') (Var 'A'))) (Imply (Var 'A') (And (Var 'A') (Var 'A'))))))) (Or (And (And (Imply (Var 'A') (And (Var 'A') (Var 'A'))) (Imply (Var 'A') (And (Var 'A') (Var 'A')))) (And (Imply (Var 'A') (And (Var 'A') (Var 'A'))) (Imply (Var 'A') (And (Var 'A') (Var 'A'))))) (And (And (Imply (Var 'A') (And (Var 'A') (Var 'A'))) (Imply (Var 'A') (And (Var 'A') (Var 'A')))) (And (Imply (Var 'A') (And (Var 'A') (Var 'A'))) (Imply (Var 'A') (And (Var 'A') (Var 'A')))))))) (Var 'C')))) (Or (Not (And (Not (Or (And (And (Imply (Var 'A') (And (Var 'A') (Var 'A'))) (Imply (Var 'A') (And (Var 'A') (Var 'A')))) (And (Imply (Var 'A') (And (Var 'A') (Var 'A'))) (Imply (Var 'A') (And (Var 'A') (Var 'A'))))) (And (And (Imply (Var 'A') (And (Var 'A') (Var 'A'))) (Imply (Var 'A') (And (Var 'A') (Var 'A')))) (And (Imply (Var 'A') (And (Var 'A') (Var 'A'))) (Imply (Var 'A') (And (Var 'A') (Var 'A'))))))) (Or (And (And (Imply (Var 'A') (And (Var 'A') (Var 'A'))) (Imply (Var 'A') (And (Var 'A') (Var 'A')))) (And (Imply (Var 'A') (And (Var 'A') (Var 'A'))) (Imply (Var 'A') (And (Var 'A') (Var 'A'))))) (And (And (Imply (Var 'A') (And (Var 'A') (Var 'A'))) (Imply (Var 'A') (And (Var 'A') (Var 'A')))) (And (Imply (Var 'A') (And (Var 'A') (Var 'A'))) (Imply (Var 'A') (And (Var 'A') (Var 'A')))))))) (Var 'C'))) (And (Imply (And (Or (Or (Or (Not (And (Not (Or (And (And (Imply (Var 'A') (And (Var 'A') (Var 'A'))) (Imply (Var 'A') (And (Var 'A') (Var 'A')))) (And (Imply (Var 'A') (And (Var 'A') (Var 'A'))) (Imply (Var 'A') (And (Var 'A') (Var 'A'))))) (And (And (Imply (Var 'A') (And (Var 'A') (Var 'A'))) (Imply (Var 'A') (And (Var 'A') (Var 'A')))) (And (Imply (Var 'A') (And (Var 'A') (Var 'A'))) (Imply (Var 'A') (And (Var 'A') (Var 'A'))))))) (Or (And (And (Imply (Var 'A') (And (Var 'A') (Var 'A'))) (Imply (Var 'A') (And (Var 'A') (Var 'A')))) (And (Imply (Var 'A') (And (Var 'A') (Var 'A'))) (Imply (Var 'A') (And (Var 'A') (Var 'A'))))) (And (And (Imply (Var 'A') (And (Var 'A') (Var 'A'))) (Imply (Var 'A') (And (Var 'A') (Var 'A')))) (And (Imply (Var 'A') (And (Var 'A') (Var 'A'))) (Imply (Var 'A') (And (Var 'A') (Var 'A')))))))) (Var 'C')) (And (Or (Not (And (Not (Or (And (And (Imply (Var 'A') (And (Var 'A') (Var 'A'))) (Imply (Var 'A') (And (Var 'A') (Var 'A')))) (And (Imply (Var 'A') (And (Var 'A') (Var 'A'))) (Imply (Var 'A') (And (Var 'A') (Var 'A'))))) (And (And (Imply (Var 'A') (And (Var 'A') (Var 'A'))) (Imply (Var 'A') (And (Var 'A') (Var 'A')))) (And (Imply (Var 'A') (And (Var 'A') (Var 'A'))) (Imply (Var 'A') (And (Var 'A') (Var 'A'))))))) (Or (And (And (Imply (Var 'A') (And (Var 'A') (Var 'A'))) (Imply (Var 'A') (And (Var 'A') (Var 'A')))) (And (Imply (Var 'A') (And (Var 'A') (Var 'A'))) (Imply (Var 'A') (And (Var 'A') (Var 'A'))))) (And (And (Imply (Var 'A') (And (Var 'A') (Var 'A'))) (Imply (Var 'A') (And (Var 'A') (Var 'A')))) (And (Imply (Var 'A') (And (Var 'A') (Var 'A'))) (Imply (Var 'A') (And (Var 'A') (Var 'A')))))))) (Var 'C')) (Var 'C'))) (Not (Or (Not (And (Not (Or (And (And (Imply (Var 'A') (And (Var 'A') (Var 'A'))) (Imply (Var 'A') (And (Var 'A') (Var 'A')))) (And (Imply (Var 'A') (And (Var 'A') (Var 'A'))) (Imply (Var 'A') (And (Var 'A') (Var 'A'))))) (And (And (Imply (Var 'A') (And (Var 'A') (Var 'A'))) (Imply (Var 'A') (And (Var 'A') (Var 'A')))) (And (Imply (Var 'A') (And (Var 'A') (Var 'A'))) (Imply (Var 'A') (And (Var 'A') (Var 'A'))))))) (Or (And (And (Imply (Var 'A') (And (Var 'A') (Var 'A'))) (Imply (Var 'A') (And (Var 'A') (Var 'A')))) (And (Imply (Var 'A') (And (Var 'A') (Var 'A'))) (Imply (Var 'A') (And (Var 'A') (Var 'A'))))) (And (And (Imply (Var 'A') (And (Var 'A') (Var 'A'))) (Imply (Var 'A') (And (Var 'A') (Var 'A')))) (And (Imply (Var 'A') (And (Var 'A') (Var 'A'))) (Imply (Var 'A') (And (Var 'A') (Var 'A')))))))) (Var 'C')))) (Or (Not (And (Not (Or (And (And (Imply (Var 'A') (And (Var 'A') (Var 'A'))) (Imply (Var 'A') (And (Var 'A') (Var 'A')))) (And (Imply (Var 'A') (And (Var 'A') (Var 'A'))) (Imply (Var 'A') (And (Var 'A') (Var 'A'))))) (And (And (Imply (Var 'A') (And (Var 'A') (Var 'A'))) (Imply (Var 'A') (And (Var 'A') (Var 'A')))) (And (Imply (Var 'A') (And (Var 'A') (Var 'A'))) (Imply (Var 'A') (And (Var 'A') (Var 'A'))))))) (Or (And (And (Imply (Var 'A') (And (Var 'A') (Var 'A'))) (Imply (Var 'A') (And (Var 'A') (Var 'A')))) (And (Imply (Var 'A') (And (Var 'A') (Var 'A'))) (Imply (Var 'A') (And (Var 'A') (Var 'A'))))) (And (And (Imply (Var 'A') (And (Var 'A') (Var 'A'))) (Imply (Var 'A') (And (Var 'A') (Var 'A')))) (And (Imply (Var 'A') (And (Var 'A') (Var 'A'))) (Imply (Var 'A') (And (Var 'A') (Var 'A')))))))) (Var 'C'))) (And (And (Or (Or (Or (Not (And (Not (Or (And (And (Imply (Var 'A') (And (Var 'A') (Var 'A'))) (Imply (Var 'A') (And (Var 'A') (Var 'A')))) (And (Imply (Var 'A') (And (Var 'A') (Var 'A'))) (Imply (Var 'A') (And (Var 'A') (Var 'A'))))) (And (And (Imply (Var 'A') (And (Var 'A') (Var 'A'))) (Imply (Var 'A') (And (Var 'A') (Var 'A')))) (And (Imply (Var 'A') (And (Var 'A') (Var 'A'))) (Imply (Var 'A') (And (Var 'A') (Var 'A'))))))) (Or (And (And (Imply (Var 'A') (And (Var 'A') (Var 'A'))) (Imply (Var 'A') (And (Var 'A') (Var 'A')))) (And (Imply (Var 'A') (And (Var 'A') (Var 'A'))) (Imply (Var 'A') (And (Var 'A') (Var 'A'))))) (And (And (Imply (Var 'A') (And (Var 'A') (Var 'A'))) (Imply (Var 'A') (And (Var 'A') (Var 'A')))) (And (Imply (Var 'A') (And (Var 'A') (Var 'A'))) (Imply (Var 'A') (And (Var 'A') (Var 'A')))))))) (Var 'C')) (And (Or (Not (And (Not (Or (And (And (Imply (Var 'A') (And (Var 'A') (Var 'A'))) (Imply (Var 'A') (And (Var 'A') (Var 'A')))) (And (Imply (Var 'A') (And (Var 'A') (Var 'A'))) (Imply (Var 'A') (And (Var 'A') (Var 'A'))))) (And (And (Imply (Var 'A') (And (Var 'A') (Var 'A'))) (Imply (Var 'A') (And (Var 'A') (Var 'A')))) (And (Imply (Var 'A') (And (Var 'A') (Var 'A'))) (Imply (Var 'A') (And (Var 'A') (Var 'A'))))))) (Or (And (And (Imply (Var 'A') (And (Var 'A') (Var 'A'))) (Imply (Var 'A') (And (Var 'A') (Var 'A')))) (And (Imply (Var 'A') (And (Var 'A') (Var 'A'))) (Imply (Var 'A') (And (Var 'A') (Var 'A'))))) (And (And (Imply (Var 'A') (And (Var 'A') (Var 'A'))) (Imply (Var 'A') (And (Var 'A') (Var 'A')))) (And (Imply (Var 'A') (And (Var 'A') (Var 'A'))) (Imply (Var 'A') (And (Var 'A') (Var 'A')))))))) (Var 'C')) (Var 'C'))) (Not (Or (Not (And (Not (Or (And (And (Imply (Var 'A') (And (Var 'A') (Var 'A'))) (Imply (Var 'A') (And (Var 'A') (Var 'A')))) (And (Imply (Var 'A') (And (Var 'A') (Var 'A'))) (Imply (Var 'A') (And (Var 'A') (Var 'A'))))) (And (And (Imply (Var 'A') (And (Var 'A') (Var 'A'))) (Imply (Var 'A') (And (Var 'A') (Var 'A')))) (And (Imply (Var 'A') (And (Var 'A') (Var 'A'))) (Imply (Var 'A') (And (Var 'A') (Var 'A'))))))) (Or (And (And (Imply (Var 'A') (And (Var 'A') (Var 'A'))) (Imply (Var 'A') (And (Var 'A') (Var 'A'))))

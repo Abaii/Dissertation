@@ -1,6 +1,13 @@
 import Debug.Trace
 
-data Formula = Var Char | Not Formula | And Formula Formula | Or Formula Formula | Imply Formula Formula deriving Eq
+data Formula = Var Char |
+               Not Formula | 
+               And Formula Formula | 
+               Or Formula Formula | 
+               Imply Formula Formula | 
+               ForAll Formula |
+               Exist Formula
+               deriving Eq
 
 instance Show Formula where
     show (Var p) =  show p
