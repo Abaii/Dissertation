@@ -2,49 +2,56 @@ module Trees where
 
 import Debug.Trace
 import System.Random
+import Control.Monad
+import Control.Monad.State
 -- IMPLEMENTING TABLEAUX WITH TREES 
 
 -- Data type for terms 
 {-
   function in first order-logic are of the form f(X0...Xn) where f is a function symbol (a constant)
-  and X0...Xn are terms
+  and X0...Xn are terms, functions of 0-arity are constants
 -}
-data Term = Const Char | Func Char [Term] deriving (Eq) 
+
+type Var = String 
+data Term = Variable Var | Func Var [Term] deriving (Eq) 
 --Formula data type
 data Formula = Var Char |
                Not Formula | 
                And Formula Formula | 
                Or Formula Formula | 
                Imply Formula Formula | 
-               ForAll Char Formula |
-               Exist Char Formula |
-               Pred Char [Term]
+               ForAll Var Formula |
+               Exist Var Formula |
+               Pred Var [Term]
                deriving Eq
 data Direction = L | R 
 
 
+
 -- Calculating occurance of variables in a term
 
-occurance :: Term -> [Char]
-occurance (Const x) = [x]
+occurance :: Term -> [Term]
+occurance (Variable x) = [Variable x]
 occurance (Func x t) = occuranceA t
 
-occuranceA :: [Term] -> [Char]
+occuranceA :: [Term] -> [Term]
 occuranceA [] = []
 occuranceA (y:ys) = occurance y++(occuranceA ys)
 
--- Compute all Free Variables in a term
-fV :: Formula -> [Char]
-fV (Var x) = [x]
+-- Compute all Free Variables in a FOL formula
+fV :: Formula -> [Term]
+fV (Var x) = [Variable [x]]
 fV (Pred x t) = occuranceA t
 fV (Not x) = fV x
 fV (Imply x y) = fV x ++ fV y
 fV (And x y) =  fV x ++ fV y
 fV (Or x y) =  fV x ++ fV y
-fV (ForAll x f) = filter (\y -> y /= x) (fV f)
-fV (Exist x f) = filter (\y -> y /= x) (fV f)
+fV (ForAll x f) = filter (\y -> y /= (Variable x)) (fV f)
+fV (Exist x f) = filter (\y -> y /= (Variable x)) (fV f)
 
--- freeVars :: Formula -> [Char]
+resMaybe :: Maybe a -> a 
+resMaybe Nothing = error "cannot create MGU"
+resMaybe (Just a) = a
 
 formula0 :: Formula 
 formula0 = Var 'P'
@@ -88,8 +95,14 @@ implication = Imply (Var 'P') (Var 'Q')
 implicationLong :: Formula 
 implicationLong = Imply (Var 'P') (Imply (Var 'S') (Imply (Var 'Q') (Var 'P')))
 
+universal :: Formula 
+universal = ForAll ("X") (Pred "P" [Variable "X"])
+
+existential :: Formula
+existential = Exist "X" (Pred "P" [Variable "X", Variable "Y"])
 instance Show Term where 
-  show (Const c) = show c
+  show (Variable c) = show c
+  show (Func s []) = show s
   show (Func s ls) = show(s)++ show(ls)
 instance Show Formula where
     show (Var p) =  show p
@@ -115,12 +128,53 @@ instance Show Lf where
     show (Lf (And a b) c) = show (And a b) ++ " " ++ show (c)
     show (Lf (Or a b) c) = show (Or a b) ++ " " ++ show (c)
     show (Lf (Imply a b) c) = show (Imply a b) ++ " " ++ show(c)
+    show (Lf (ForAll a b) c) = show (ForAll a b) ++ " " ++ show(c)
+    show (Lf (Exist a b) c) = show (Exist a b) ++ " " ++ show(c)
+    show (Lf (Pred x y) c) = show(Pred x y) ++ " " ++ show(c)
 
+
+-- Create counter for variable 
+data Counter = Counter {
+  varCount :: !Int
+}
 {-
 Given a formula create the corresponding node for a tableaux tree.
 -}
 createNode :: Formula -> Tree Lf
-createNode formula =  Node (Lf (Not formula) False) Empty Empty
+createNode formula =  Node (Lf ( formula) False) Empty Empty
+
+-- rp' - replace all terms, x with t in a list of terms.
+rp' :: [Term] -> [Term] -> Term -> Term-> [Term]
+rp' [] newList _ _ = newList
+rp' (x@(Variable x'):xs) nTerms original new
+  | x == original = rp' xs (new:nTerms) original new
+  | otherwise = rp' xs (x:nTerms) original new
+
+rp' (x@(Func f t'):xs) nTerms original new 
+  | x == original = rp' xs (new:nTerms) original new
+  | otherwise = rp' xs (nTerms++[Func f t'']) original new
+    where t'' = rp' t' [] original new
+{-
+  Replace all occurances of x in ForAll x with x', where x' is a variable not occuring anywhere else in the tableau.
+-}
+subst :: Formula -> Term -> Formula 
+subst (ForAll x t@(Pred p terms)) x' = ForAll x p'
+  where t' = rp' terms [] (Variable x) x' 
+        p' = Pred p t'
+subst (Exist x t@(Pred p terms)) x'  =  p'
+  where t' = rp' terms [] (Variable x) x' 
+        p' = Pred p t'
+subst (And x y ) x' = And (subst x x') (subst y x')
+subst (Or x y ) x' = Or (subst x x') (subst y x')
+subst (Imply x y ) x' = Imply (subst x x') (subst y x')
+subst (Not x ) x' = Not (subst x x') 
+
+{-
+  create skolem func
+-}
+skolemFunc :: Formula -> String -> Term
+skolemFunc f s =  Func s freeVars
+  where freeVars = fV f
 
 expandNode :: Tree Lf -> Tree Lf 
 expandNode Empty = Empty 
@@ -160,6 +214,21 @@ expandNode (Node (Lf (Not (And x y)) False) _ _) = Node f' x' y'
   where f' = (Lf (Not (And x y)) True) 
         x' = Node (Lf (Not x) False) Empty Empty
         y' = Node (Lf (Not y) False) Empty Empty
+
+-- FOL rules 
+
+expandNode (Node (Lf f@(Exist x f') False) _ _) = traceShow("f''", f'') Node f1 xy' Empty
+  where f1 = (Lf (Exist x f') True)
+        sf = skolemFunc f "f"
+        f'' = subst f sf
+        xy' = (Node (Lf (f'') False) Empty Empty) 
+expandNode (Node (Lf f@(ForAll x _) False) _ _) = Node f1 xy' Empty
+  where f1 = (Lf (ForAll x f) True)
+        f' = subst f (Variable "Z")
+        xy' = (Node (Lf( f' ) False) Empty Empty)  
+
+expandNode (Node (Lf (Not (Exist x f)) False ) l r) = expandNode (Node (Lf (ForAll x f) False) l r)
+
 
 {-
   insertLR - takes a Lfs and places each argument on the next 
@@ -214,6 +283,7 @@ createTableaux :: Tree Lf  -> Tree Lf
 createTableaux Empty = Empty 
 createTableaux (Node (Lf (Var x) False) l r) = Node (Lf (Var x) True) (createTableaux l) (createTableaux r)  
 createTableaux (Node (Lf (Not (Var x)) False) l r) = Node (Lf (Not (Var x)) True) (createTableaux l) (createTableaux r)  
+createTableaux (Node (Lf (Pred x t) False) l r) = Node (Lf (Pred x t) True) (createTableaux l) (createTableaux r)
 createTableaux f@(Node (Lf formula expanded) l r)
   | expanded =   Node (Lf formula expanded) (createTableaux l) (createTableaux r)
   | otherwise =  createTableaux $ rules f (Node (Lf formula True) (createTableaux (l)) (createTableaux(r))) 
