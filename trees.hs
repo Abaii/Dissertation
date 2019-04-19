@@ -10,10 +10,12 @@ import Control.Monad.State
 {-
   function in first order-logic are of the form f(X0...Xn) where f is a function symbol (a constant)
   and X0...Xn are terms, functions of 0-arity are constants
+  -- Func (Var, Int) [Term] where Int is the arity, each Func f has its own arity.
 -}
 
 type Var = String 
-data Term = Variable Var | Func Var [Term] deriving (Eq) 
+data Term = Variable Var | Func (Var, Int) [Term] deriving (Eq)  
+
 --Formula data type
 data Formula = Var Char |
                Not Formula | 
@@ -98,8 +100,17 @@ implicationLong = Imply (Var 'P') (Imply (Var 'S') (Imply (Var 'Q') (Var 'P')))
 universal :: Formula 
 universal = ForAll ("X") (Pred "P" [Variable "X"])
 
+nUniversal :: Formula
+nUniversal = ForAll ("X") $  Not (Pred "P" [Variable "X"])
+nofree :: Formula
+nofree = Exist ("X") $ Not $ Pred "P" [Variable "X"]
+predicate :: Formula 
+predicate = Pred "P" [Variable "X"]
 existential :: Formula
-existential = Exist "X" (Pred "P" [Variable "X", Variable "Y"])
+existential = Exist "X" (Pred "P" [Variable "X", Variable "Y", Variable "Z", Func ("a",0) []])
+
+f111 :: Formula
+f111 = And universal universal
 instance Show Term where 
   show (Variable c) = show c
   show (Func s []) = show s
@@ -115,7 +126,9 @@ instance Show Formula where
     show (Pred x y) = show(x) ++ "(" ++ show(y) ++")" 
 
 data Tree a = Empty | Node a (Tree a) (Tree a) deriving (Show, Eq)
-
+instance Functor Tree where
+ fmap f Empty = Empty
+ fmap f (Node x left right) = Node (f x) (fmap f left) (fmap f right)
 -- Formulas on tree nodes with an 'expanded' attribute
 data Lf = Lf {
     formula :: !Formula,
@@ -141,7 +154,7 @@ data Counter = Counter {
 Given a formula create the corresponding node for a tableaux tree.
 -}
 createNode :: Formula -> Tree Lf
-createNode formula =  Node (Lf ( formula) False) Empty Empty
+createNode formula =  Node (Lf ( Not formula) False) Empty Empty
 
 -- rp' - replace all terms, x with t in a list of terms.
 rp' :: [Term] -> [Term] -> Term -> Term-> [Term]
@@ -154,26 +167,36 @@ rp' (x@(Func f t'):xs) nTerms original new
   | x == original = rp' xs (new:nTerms) original new
   | otherwise = rp' xs (nTerms++[Func f t'']) original new
     where t'' = rp' t' [] original new
+
+subPred :: Formula -> Term -> Term -> Formula 
+subPred (Pred p terms) t1 t2 = Pred p terms'
+  where terms' = rp' terms [] t1 t2
+subPred (Not x) t1 t2 = Not $ subPred x t1 t2
+subPred f _ _ = f  
 {-
   Replace all occurances of x in ForAll x with x', where x' is a variable not occuring anywhere else in the tableau.
 -}
 subst :: Formula -> Term -> Formula 
-subst (ForAll x t@(Pred p terms)) x' = ForAll x p'
-  where t' = rp' terms [] (Variable x) x' 
-        p' = Pred p t'
-subst (Exist x t@(Pred p terms)) x'  =  p'
-  where t' = rp' terms [] (Variable x) x' 
-        p' = Pred p t'
+subst (ForAll x p) x' = ForAll x p
+    where p' = subPred p (Variable x) x'
+subst  (Exist x p) x' = Exist x p'
+  where p' = subPred p (Variable x) x'
 subst (And x y ) x' = And (subst x x') (subst y x')
 subst (Or x y ) x' = Or (subst x x') (subst y x')
 subst (Imply x y ) x' = Imply (subst x x') (subst y x')
-subst (Not x ) x' = Not (subst x x') 
+subst (Not x ) x' =  Not (subst x x') 
 
+-- All variables
+vars = ["v"++show(x)| x <- [1..]]
+
+skolems = ["f"++show(x) | x <- [1..]]
 {-
   create skolem func
 -}
 skolemFunc :: Formula -> String -> Term
-skolemFunc f s =  Func s freeVars
+skolemFunc f s 
+  | length(freeVars) == 0 = Func (s,0) []
+  | otherwise = Func (s, length(freeVars)) freeVars
   where freeVars = fV f
 
 expandNode :: Tree Lf -> Tree Lf 
@@ -181,7 +204,11 @@ expandNode Empty = Empty
 expandNode (Node (Lf (Var x) False) _ _) = Node (Lf (Var x) True) Empty Empty 
 
 expandNode (Node (Lf (Not (Var x)) False) _ _) = Node (Lf (Not (Var x )) True)  Empty Empty 
-        
+
+expandNode (Node (Lf (Pred x t) False) _ _) = Node (Lf (Pred x t) True) Empty Empty
+expandNode (Node (Lf (Not (Pred x t) )False) _ _) = Node (Lf (Not (Pred x t)) True) Empty Empty
+
+
 expandNode (Node (Lf (And x y) False) _ _) = Node f' xy' Empty 
       where  f' = Lf (And x y) True
              xy' = Node (Lf x False) (Node (Lf y False) Empty Empty) Empty
@@ -217,17 +244,20 @@ expandNode (Node (Lf (Not (And x y)) False) _ _) = Node f' x' y'
 
 -- FOL rules 
 
-expandNode (Node (Lf f@(Exist x f') False) _ _) = traceShow("f''", f'') Node f1 xy' Empty
+expandNode (Node (Lf f@(Exist x f') False) _ _) = traceShow("hit", subst f sf)  Node f1 xy' Empty
   where f1 = (Lf (Exist x f') True)
-        sf = skolemFunc f "f"
-        f'' = subst f sf
+        sf = skolemFunc f (head skolems)
+        (Exist x f'') = subst f sf
         xy' = (Node (Lf (f'') False) Empty Empty) 
-expandNode (Node (Lf f@(ForAll x _) False) _ _) = Node f1 xy' Empty
-  where f1 = (Lf (ForAll x f) True)
-        f' = subst f (Variable "Z")
-        xy' = (Node (Lf( f' ) False) Empty Empty)  
 
-expandNode (Node (Lf (Not (Exist x f)) False ) l r) = expandNode (Node (Lf (ForAll x f) False) l r)
+expandNode (Node (Lf f@(ForAll x f') False) _ _) = Node f1 xy' Empty
+  where f1 = (Lf (ForAll x f') True)
+        ForAll x f'' = subst f (Variable "Z")
+        xy' = (Node (Lf(f'' ) False) Empty Empty)  
+
+expandNode (Node (Lf (Not (ForAll x f)) False ) l r) = expandNode (Node (Lf (Exist x (Not f)) False) Empty Empty)
+
+expandNode (Node (Lf (Not (Exist x f)) False ) l r) = expandNode (Node (Lf (ForAll x (Not f)) False) Empty Empty)
 
 
 {-
@@ -284,6 +314,8 @@ createTableaux Empty = Empty
 createTableaux (Node (Lf (Var x) False) l r) = Node (Lf (Var x) True) (createTableaux l) (createTableaux r)  
 createTableaux (Node (Lf (Not (Var x)) False) l r) = Node (Lf (Not (Var x)) True) (createTableaux l) (createTableaux r)  
 createTableaux (Node (Lf (Pred x t) False) l r) = Node (Lf (Pred x t) True) (createTableaux l) (createTableaux r)
+createTableaux (Node (Lf (Not (Pred x t)) False) l r) = Node (Lf (Not (Pred x t)) True) (createTableaux l) (createTableaux r)
+
 createTableaux f@(Node (Lf formula expanded) l r)
   | expanded =   Node (Lf formula expanded) (createTableaux l) (createTableaux r)
   | otherwise =  createTableaux $ rules f (Node (Lf formula True) (createTableaux (l)) (createTableaux(r))) 
@@ -291,6 +323,9 @@ createTableaux f@(Node (Lf formula expanded) l r)
 
 isTautology :: Formula -> Bool 
 isTautology formula = tableauxIsClosed $ branch $ createTableaux $ createNode formula
+
+
+
 
 p26 :: Formula
 p26 = Or (And (Or (And p24 p24) (And p24 p24)) (Or (And p24 p24) (And p24 p24))) (And (Or (And p24 p24) (And p24 p24)) (Or (And p24 p24) (And p24 p24))) 
