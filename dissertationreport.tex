@@ -1,0 +1,394 @@
+\documentclass{article}% use option titlepage to get the title on a page of its own.
+\usepackage{blindtext}
+\usepackage{amsmath}
+\usepackage{cite}
+\usepackage{minted}
+\usepackage{mpshaskell}
+
+
+\newtheorem{definition}{Definition}
+\title{Programming a tableau calculus for Predicate logic in Haskell.}
+\date{01/05/2019\\}
+\author{Abai Edmund\\  Supervisor: Georg Struth}
+
+
+\begin{document}
+\maketitle
+\newpage
+\section{Abstract} 
+This report aims to formalise a tableaux for propositional and predicate logic using functional programming. It will detail all current knowledge of the field of Logic, focusing on propositional logic and touching on predicate logic. The tableaux method will also be outlined, and how it is used as a refutation method. Concepts in functional programming will be detailed, in particular Haskell, which concepts were used in implementation of this project and why it is the language of choice to complete this particular project. This report aims to be an introduction to logic, functional programming and method of analytical tableau. Lastly, testing will be shown as well as future advancement that could improve the program given more time.
+\newpage
+\tableofcontents
+\newpage
+\section{Introduction}
+\subsection{Setting the scene}
+The method of analytical tableau was created by dutch logician Evert William Beth in 1955 as a proof procedure. However, before discussing tableau we must first be introduced to the field of Logic. \\Logic is a field of mathematics that plays a big role in many aspects of Computer Science. As a mathematical field it dates back to its inventor, Aristotle, it remained largely the same until the $20^th$ century where logic saw many advancements leading to concepts such as predicate logic. It is used for circuit design, computability theory and solvers such as model checkers. It is a very broad subject area however this report will be focusing on the method of analytical tableau which is a proof procedure for logical formulas. In logic we build sentences which are evaluated to true or false values, we use such sentences to reason about the world - or more specifically a domain. For example, \textit{"It is raining outside"} could be expressed using a logical formula however logic is unable to reason about more ambiguous or subjective sentences such as \textit{"That bed is too small."}. This makes sense as logic is fundamentally a mathematical concept where, ideas such as ambiguity and subjectivity are not prevalent or wanted in mathematics.
+We are able to create larger formulas by chaining our sentences together with \textit{connectives} these connectives can include but are not limited to: and, or, not, imply.
+As computer scientists we are concerned with the truth and falsity values of such sentences as well as knowing if is there a way to know that this formula is or can be true? Or perhaps even always true? Such an answer to that question is called a proof. We use proof procedures as a way of deducing proofs from a logical formula. There are many widely used proof procedures that have been created, such as the Z3 theorem prover from Microsoft Research, CVC4 or Vaapire.   
+\subsubsection{Individual contributions}
+With the aim of this report being to provide a solid introductory explanation of Propositional and First-Order-Logic, the Haskell programming language and the method of analytical tableau. This main  area of this report will be detailing the basic ideas behind both logical languages, fundamental concepts of functional programming and how tableau are created. Moreover it will detail a Haskell implementation to the following problems: 
+\begin{enumerate}
+\item A representation of both predicate and propositional logic in Haskell.
+\item An implementation for creating a Tableau for propositional logic, detailing the methods used to create the Tableau, the structure of the Tableau and the different functional programming concepts that were used to create the Tableau.
+\item An implementation for creating a Tableau for first-order logic. It will outline the same problems faced for propositional logic but adapted for first-order logic as well as an algorithm for unification, what unification is and why it is needed for first-order logic tableau. 
+\end{enumerate}
+
+
+\subsection{Research question}
+This paper concerns itself with creating a tableau calculus in Haskell to check for validity and satisfiability in both propositional and First-Order-Logic statements. The aim of this report is to explain how the process of creating a tableau calculus was broken into steps then implemented from the ground up. Ultimately, we are trying to deduce whether it is possible to create a proof for logical formulas
+
+\section{Background}
+\subsection{Propositional logic}
+Propositional logic is a branch of logic that allows conclusions to be derived from statements called \textit{propositions}. We take a set of sentences called \textit{atomic sentences} that express some proposition and we chain them together using \textit{connectives} from a set of \textit{connectives}. Take the sentence \textit{"The sky is blue"}, which conveys the proposition that the sky is blue. We can chain this sentence with another such as \textit{"Water is wet"}, to form another sentence \textit{"The sky is blue and water is wet"}, using the connective \textit{"and"}. This process can be repeated with more atomic sentences to create larger formulas. For any given propositional formula we can assign True or False values to each atomic sentence, it is these binary values of the atomic sentence which determine the value of the entire formula for which the atomic sentences create. These true or false values assigned the such atomic sentences are called a \textit{model}. We are often concerned with whether there is a model for a given formula that would result in the formula being true, or whether every model yields a true result. Such a formula is called a \textit{tautology} which will be explained later in the report. 
+\subsubsection{Syntax of propositional logic}
+As with all languages, propositional logic has a well defined syntax and semantics. 
+\begin{definition}
+The alphabet of propositional logic.
+\end{definition}
+\begin{enumerate}
+\item We use a list of letters $P_1, P_2, ... $ to represent our atomic statements from a countably infinite set of letters $P$;
+\item A list of symbols, $\land$, $\lor$, $\neg$  $\implies$, to denote connectives.
+\end{enumerate}
+
+We build sentences in propositional logic but connecting our letters via connectives. Each connective has n-arity which can be thought of as the amount of arguments each connective takes. For example $\land$, $\implies$ and $\lor$ are 2-arity connectives, $\neg$ is a 1-arity connective. 
+ 
+\subsubsection{Tatuologies}
+A tautology is a logical statement which yields a true value for every given model. In other words it is always true. An example of such a sentence in plain English could be \textit{'"I am a man or I am not a man"} which could be expressed as $p \lor \neg{p}$ in propositional logic
+\subsection{Predicate logic}
+
+Predicate logic, also known as first-order logic, builds on the ideas of expressing logical sentences like propositional logic but allows for more complex sentences to be built. Predicate logic uses the same connectives, negation, conjunction, dis- junction and implication however it extends propositional logic by allowing the possibility to build sentences which quantify statements over a domain of discourse, or a given set of entities by introducing quantifiers. Quantifiers are able to express more complex sentences such as ”For all x in some domain” and ”There exists a given x in some domain” where our domain could be the natural numbers with each ”X” being a number, or a room where each ”X” is a person. 
+\subsubsection{Syntax of predicate logic}
+\begin{definition}
+Alphabet of Predicate logic.
+\end{definition}
+\begin{enumerate}
+\item We define 
+\end{enumerate}
+
+\subsection{The Haskell programming language}
+\subsubsection{Introduction to Haskell}
+All Haskell concepts mentioned below have used Graham Hutton’s book, Introduction to Haskell. Haskell is a pure, lazy, functional programming language developed in 1987 by an international committee of programming language researchers. A pure language is one which has no side effects, a side effect is some action which has an effect on some internal state which value is then used to produce an output. Internal states like this do not occur in Haskell, this means that regardless of how many times a function in Haskell is run, the same parameters shall always yield the same results. The result of a function is fully dependent on the parameters passed to it and nothing else, we can also say that any function call can be replaced by its value and the meaning of the program will not change. \\\\
+Given the function:\\
+\begin{minted}{haskell}
+double :: Int -> Int 
+double x = x+2
+\end{minted}
+In a pure language we should be able to replace any expression double(2) with the Int, 4 and the meaning of the program should not change. 
+Examples of impure actions include: 
+\begin{enumerate}
+\item Mutating the arguments of some function,$f$;
+\item I/O operations;
+\item Randomness, e.g implementing random number generators. 
+\end{enumerate}
+Haskell is a lazy language, which means Haskell only evaluates expressions when asked. For example, in an eager language (opposite of lazy) if asked to compute a list of all the square numbers up to 1000, it will compute every square number up to 1000 put each number in a list and then store that list. However, in a lazy language the square values won’t be calculated until a specific value or values are explicitly asked for. This allows for structures such as infinite lists to be created in Haskell and other lazy languages.
+Functions in Haskell take one or more arguments and produce a single result. 
+Consider the following Haskell function AddTwo: 
+\begin{myFunctionStyle}
+AddTwo x = x + 2
+\end{myFunctionStyle}
+
+To define a function in Haskell we must first define a type signature for that function which takes the function name, the type of it's parameters and the type of its output. Therefore the type signature of our function\begin{myFunctionStyle}
+AddTwo x = x + 2
+\end{myFunctionStyle} would be defined as \\ \begin{myFunctionStyle}
+AddTwo :: Int -> Int 
+\end{myFunctionStyle}\\
+The double colon ,$::$, syntax can be read as "is of type of" and the $->$ syntax can be thought of as a binary connective which says takes some type and returns another type. Putting this together the function $AddTwo$ can be read as, "AddTwo is a function which takes an integer as a parameter and returns another integer." 
+In this case \textit{AddTwo} takes a variable \begin{myKeyWordStyle}{x}\end{myKeyWordStyle} and returns x + 2.
+Haskell makes use of higher order functions, functions which are used within other functions, to build increasingly more complex functions. 
+For example AddTwo(AddTwo x) will return x+4. 
+%%% RECURSION
+\subsubsection{Recursion}
+A common pattern in Haskell is recursion. As Haskell is a pure programming language, and thus states inside functions cannot be modified, recursion is used as a powerful tool used widely to iterate through data structures and carry out operations on elements in these data structures. Recursive functions are functions which call themselves, they need a base case and a recursive call. Once called each value from the recursive call is added onto a stack until the base case is hit, the function then carries out the original operation 
+Consider the following function 
+%% ALGEBRAIAC DATA TYPES
+\subsubsection{Algebraic data types and Prop data type}
+It is possible to create data types in Haskell, as well as algebraic data types. Algebraic data types are types which can be created by combining other types together.
+Data types in Haskell are formed by writing the keyword \begin{myKeyWordStyle}data\end{myKeyWordStyle} followed by the name of the data type and zero or more constructor(s). The name of the data type and constructors(s) must begin with a capital letter.
+Examples of different data types in Haskell.
+\begin{enumerate}
+\item\textbf{Boolean data type:}
+\begin{myTypeNameStyle}Data Bool = \begin{myConstructorStyle}True | False\end{myConstructorStyle} \end{myTypeNameStyle}
+The data type \begin{myTypeVarStyle}Bool\end{myTypeVarStyle} represents the boolean values and can either have a True or False value. 
+\item\textbf{Algebraic data type:}
+Data \begin{myTypeNameStyle} MyDataType \end{myTypeNameStyle} = \begin{myConstructorStyle}  A Int | B String  \end{myConstructorStyle} 
+The data type \begin {myTypeVarStyle}MyDataType \end{myTypeVarStyle} can take the value of one of the two constructors either \textit{A} or \textit{B} where A takes a value of type Int and B takes the value of type String.
+\item\textbf{Algebraic data type:}
+\begin{myTypeNameStyle}data AnotherDataType = \begin{myConstructorStyle}C Int Bool\end{myConstructorStyle}\end{myTypeNameStyle}
+The data type here has a constructor \textit{C} where it is the composition of an Int and Bool type. 
+\item\textbf{Recursive Algebraic data type:}
+\begin{myTypeNameStyle}data Nat = \begin{myConstructorStyle}None | Succ Nat \end{myConstructorStyle}\end{myTypeNameStyle}
+The Nat data type represents every natural number using recursion. The sequence of all the natural numbers can be derived by continually applying the Succ constructor on the previous value. 
+For example. Succ (Succ (Succ None))) is equivalent to 1 + (1+(1+0) which equals 3.
+\end{enumerate}
+%%record syntax
+\subsection{Haskell's record syntax}
+Let us define a datatype called Car to represent some car as such: \\
+\begin{myTypeNameStyle}Data Car = \begin{myConstructorStyle}Car String String  \end{myConstructorStyle} \end{myTypeNameStyle}
+Where the first two String parameters represent the model and colour of the car respectively.
+\\
+We could then create a new car, myCar = Car  "Toyota" "Blue". Now in the case we want to retrieve the model of $myCar$ we could define a function,\\
+\begin{myFunctionStyle}getCar :: Car -> String \end{myFunctionStyle}
+\\
+Defining a function as this for each parameter would be tedious, especially for a constructor which takes many parameters. This is where record syntax comes in handy. We can redefine our Car data type to look like this: \\\\
+\begin{myTypeNameStyle}Data Car = \begin{myConstructorStyle}Car {model :: String, colour :: String }  \end{myConstructorStyle} \end{myTypeNameStyle}\\\\
+Haskell creates functions named model and colour which take a Car datatype and return the model or the colour of that specific instance of Car.  
+\subsection{Pattern matching and other useful techniques}
+Functions in Haskell make great use of pattern matching to access data, there are a few useful pattern matching techniques that are often used in Haskell programs.
+\begin{itemize}
+\item (x:xs) is a common pattern used, it represents a list and split the list into a head and tail, x being the head of the list and xs being the tail. This is often used to carry out operations on lists using recursion. 
+\item Often when passing a value as a parameter we want to have access to both the value as a whole and the individual parts that may make it up. For example, given a list, $L$, we may pass it to some function $f$ as (x:xs) to access the head and tail but we may also want to be able to execute some action on $L$ as a whole. We use the @ notation in Haskell to do so, passing $L@(x:xs)$ into our function $f$ gives us access to our list in both formats. 
+\item Function composition: Haskell functions are built by combing smaller functions, like in mathematics we can use function composition using a dot notation to chain different functions together. In Haskell $f (g x) = f . g $ this allows for more readable code. 
+\item In Haskell a dollar sign, \$\ is syntactic sugar for brackets for readability. x \$\ y is equal to x(y).
+\end{itemize}
+\section{Tableaux calculi}
+As stated before, the method of analytic tableau is a proof procedure. It proves the validity of formulas by method of refutation, that is given some formula $f$, $\neg{f}$ is input into the tableau and shows that $\neg{f}$ is invalid therefore proving that $f$ must be valid. Tableau are tree data structures, which contain a negated formula at the root and each node is labelled with formulas. To further understand tableau, we reference Melvin Fitting's book: First order logic and automated theorem proving. We already know that a formula is comprised of smaller formulas chained together via connectives. There are two rules associated with propositional logic $\beta$ and $\alpha$.
+The beta rule states that if applied to a formula on some branch $\theta$ we extend the left and right subtree of $\theta$ by appending each argument of the formula to the subtrees.
+
+\section{Implementing a Tableau calculus for Propositional logic}
+Before tackling predicate logic, a tableau calculus for propositional logic was made as, it is a simpler task but still encompasses a lot of the work needed to create a tableau calculus for predicate logic. For both propositional and predicate logic, building a tableau calculus followed similar steps. Define the data types, define the expansion rules, implement these expansion rules to build a tree. Predicate logic contained additional, more complex steps such as creating a unification algorithm and modifying expansion rules to introduce fresh parameters and Skolem functions. 
+\subsection{Method of analytical tableau for Propositional logic}
+
+\subsubsection{Prop data type}
+The process of creating a tableau for propositional logic began with creating a data type to represent propositional formulas.  Modifying a version of the datatype used in Graham Huttons book: Programming in Haskell in which he outlines a tautology checker. We can produce an algebraic data type which is used to create propositional statements in this project.
+In Haskell, the data type \begin{myTypeVarStyle}Prop\end{myTypeVarStyle} is defined as such: 
+\vspace{5mm}
+
+
+data \begin{myTypeNameStyle} Prop \end{myTypeNameStyle} = \begin{myConstructorStyle} Var Char |\\\-\hspace{3.15cm}Not Formula |\\\-\hspace{3.15cm}Or Formula Formula |\\\-\hspace{3.15cm}And Formula Formula |\\\-\hspace{3.15cm}Imply Formula Formula \end{myConstructorStyle}\\
+Propositional variables are represented by the \begin{myConstructorStyle}Var \end{myConstructorStyle}. \\
+The \begin{myConstructorStyle}Not \end{myConstructorStyle} \begin{myConstructorStyle}And \end{myConstructorStyle} and \begin{myConstructorStyle}Imply \end{myConstructorStyle}, and \begin{myConstructorStyle}Imply \end{myConstructorStyle} constructors can take another \begin{myTypeNameStyle}Formula\end{myTypeNameStyle} data type as an argument, the recursive property allows us to chain propositional statements together to create more complicated statements. \begin{myConstructorStyle}Var \end{myConstructorStyle} can be thought of as the base case in such a recursive formula. 
+
+In order to create a tableau, we must also define a data type to represent a tree data structure, the definition for a tree is as follows: \\\\
+data \begin{myTypeNameStyle} Tree a\end{myTypeNameStyle} = \begin{myConstructorStyle} Empty | Node a (Tree a ) (Tree a) \end{myConstructorStyle}\\\\
+This is another recursive data type, which can be read as a tree contains nothing (Empty) or it consists of a single node with a left and right subtree with each node labelled with some value of type $a$. 
+
+A third data type was also defined called Lf, which stands for Labelled Formula, like so: 
+\begin{minted}{haskell}
+Data Lf = Lf {formula :: Formula, 
+expanded :: Bool } 
+\end{minted} 
+The Lf data type is used to create formulas which have a boolean label attached to them, this boolean value is used later on when constructing a tableau as it indicates whether or not that formula in the tree has already been expanded. 
+\subsubsection{Expansion rules}
+The expansion rules were simple to implement and defined in a function named expandNode. Type signature for expandNode: \begin{myFunctionStyle} expandNode :: Tree Lf -> Tree Lf  \end{myFunctionStyle}.
+The basic expansion rules where defined as follows: 
+\begin{minted}{haskell}
+expandNode :: Tree Lf ->  Tree Lf 
+expandNode Empty  = Empty 
+expandNode (Node (Lf (Var x) False) _ _) = Node (Lf (Var x) True) Empty Empty 
+
+expandNode (Node (Lf (Not (Var x)) False) _ _) = Node (Lf (Not (Var x )) True)  Empty Empty 
+
+expandNode (Node (Lf (Pred x t) False) _ _) = Node (Lf (Pred x t) True) Empty Empty
+expandNode (Node (Lf (Not (Pred x t) )False) _ _)  = Node (Lf (Not (Pred x t)) True) Empty Empty
+
+
+expandNode (Node (Lf (And x y) False) _ _)  = Node f' xy' Empty 
+      where  f' = Lf (And x y) True
+             xy' = Node (Lf x False) (Node (Lf y False) Empty Empty) Empty
+ 
+expandNode (Node (Lf (Or x y) False) _ _)   = Node f' x' y'
+  where f' = Lf (Or x y) True
+        x' = Node (Lf x False) Empty Empty
+        y' = Node (Lf y False) Empty Empty
+
+expandNode (Node (Lf (Imply x y) False) _ _)  = Node f' x' y'
+  where f' =  Lf (Imply x y) True 
+        x' = Node (Lf (Not (x)) False) Empty Empty
+        y' = Node (Lf y False) Empty Empty 
+
+expandNode (Node (Lf (Not (Imply x y)) False) _ _)  = Node f' xy' Empty 
+  where f' = (Lf (Not (Imply x y)) True)
+        xy' = (Node (Lf x False) (Node (Lf (Not y) False) Empty Empty) Empty)    
+
+-- Double negation law
+expandNode (Node (Lf (Not (Not x)) False) _ _)  =  Node f' x' Empty
+  where f' = (Lf (Not (Not x)) False)  
+        x' = (Node (Lf x False) Empty Empty) 
+-- De morgans laws
+expandNode (Node (Lf (Not (Or x y)) False) _ _)  =  Node f' xy' Empty
+  where f' = (Lf (Not (Or x y)) True)
+        
+        xy' = (Node (Lf (Not x) False) (Node (Lf (Not y) False) Empty Empty) Empty )
+
+expandNode (Node (Lf (Not (And x y)) False) _ _)  =  Node f' x' y'
+  where f' = (Lf (Not (And x y)) True) 
+        x' = Node (Lf (Not x) False) Empty Empty
+        y' = Node (Lf (Not y) False) Empty Empty
+\end{minted}
+The expand node function a node and expands it returning the node as the root and the resulting tree with the expansion of that node. All beta rules result in the tree creating a new branch and the alpha rules always add the formulas to the left subtree. Extra rules were added for De Morgans and double negation laws as well as applying simplifications to formulas where valid. For example $\neg{(p\land q)}$ = $\neg{p} \lor \neg{q}$.
+
+\subsubsection{Placing nodes onto a tree}
+The next task was creating a function which takes two formulas and applies them to the next left or right empty space on the current branch. 
+\begin{minted}{haskell}
+
+{-
+  insertLR - takes a Lfs and places each argument on the next 
+  left and right empty sub tree in an existing tree (Beta rule)
+-}
+insertLR :: Tree Lf -> Tree Lf -> Tree Lf -> Tree Lf 
+insertLR leftF rightF tree@(Node x l r )
+  | l == Empty = (Node x leftF rightF)
+  | b == Empty && c == Empty = Node x (Node a leftF rightF) r
+  | otherwise = insertLR leftF rightF l 
+    where (Node a b c) = l
+\end{minted}
+This function is a recursive function which checks to find the next Empty space down the left subtree, once it finds it, it will place the two formulas on the left and right of that Empty space. 
+We then carry on by defining a function which takes a tree and a node, applies the expansion rule to said node and appends it to the given tree using the insertLR function. We call this function: rules;
+\begin{minted}{haskell}
+{-
+expands a formula and adds the formulas onto the end of the tree depending on whether its an alpha or beta rule.
+-}
+rules :: Tree Lf -> Tree Lf  -> Tree Lf 
+rules Empty tree _ = tree 
+rules node Empty _ = node
+rules node tree   =   insertLR l r tree
+    where (Node a l r) = expandNode node 
+\end{minted}
+Once we have those three functions in place and tested a function to generate the tableau could be created;
+\begin{minted}{haskell}
+
+createTableaux :: Tree Lf  -> Tree Lf
+createTableaux Empty = Empty 
+createTableaux (Node (Lf (Var x) False) l r) = Node (Lf (Var x) True) (createTableaux l) (createTableaux r)  
+createTableaux (Node (Lf (Not (Var x)) False) l r) = Node (Lf (Not (Var x)) True) (createTableaux l) (createTableaux r)  
+
+createTableaux f@(Node (Lf formula expanded) l r)
+  | expanded =  Node (Lf formula expanded) (createTableaux l) (createTableaux r)
+  | otherwise =  createTableaux $ rules f (Node (Lf formula True) (createTableaux l)  (createTableaux r)) 
+\end{minted}
+Generating the tableau works by taking the initial node, expanding it and adding the result of the expansion to the root node using the rules function and then labelling the root node as being expanded. That new tree is then passed back into the function, the root node is ignored as it has been expanded and the function searches for nodes in the left and right subtree and expands them. Repeating this process until the base case Empty is hit. The program eventually stops, as each formula is stripped with each expansion until the leaf node of any given branch contains a literal, each literal has no expansion, it adds an Empty to each leaf node and marks the literal as expanded. Therefore, eventually the tree searches every node, sees everything has been expanded, the nodes below the leaf nodes are Empty and then the resulting tree is returned. \\\\
+\subsubsection{Closing and collecting branches} 
+We can already see the benefit of using Haskell as a tableaux calculus has been generated in very few lines of code in a concise manner. Once the tableaux is created, we begin to implemented checking for closedness of each branch to determine validity. Firstly, the branches of a tree are collected and stored as nested list where each nested list represents each branch of the tree. 
+\begin{minted}{haskell}
+--Gets branches of a tree
+branch :: Tree Lf -> [[Formula]]
+branch Empty = [[]]
+branch (Node (Lf formula _) Empty Empty) =  [[formula]]
+branch (Node (Lf formula _) l r) 
+  | r == Empty =  map (formula:) (branch l)
+  | otherwise =  map (formula :) (branch l++ branch r)
+\end{minted}
+branch is a recursive formula which works by adding each formula in a branch to a list and adding each branch to an outer list. 
+The last step is to check for a formula $X$ and $\neg{X}$ in a single branch then apply that formula to each list in a nested list. If every list in that nested list is closed then we conclude the tableau is closed.
+\begin{minted}{haskell}
+--check for a closed tree 
+treeIsClosed :: [Formula] -> Bool 
+treeIsClosed [] = False 
+treeIsClosed list@(x:xs)
+  | var `elem` list && (Not var `elem` list) = True
+  | otherwise = treeIsClosed xs
+    where var = getVar x 
+
+-- check for closed tableaux
+tableauxIsClosed :: [[Formula]] -> Bool 
+tableauxIsClosed [] = True 
+tableauxIsClosed (x:xs) 
+  | treeIsClosed x = tableauxIsClosed xs 
+  | otherwise = False
+\end{minted}
+treeIsClosed is the auxillary function which checks for a contradiction in a single list of formulas. getVar is an auxillary function used in treeIsClosed to extract the character of a variable and the negation of its variable to then check to see if the both the variable and its negation occur in the same branch. 
+
+Finally, we combine each function into a single function which returns the true or false value dictating whether the tree is closed.
+\begin{minted}{haskell}
+isTautology :: Formula -> Bool 
+isTautology = tableauxIsClosed . branch . createTableaux . createNode
+\end{minted}
+ isTautology makes use of Haskells function composition syntax. f.g x = f (g x). It combines the functions is a nice and readable way. This completes the implementation for tableaux for propositional logic. 
+\subsection{Testing tableaux for propositional logic}
+The implementation was tested against the validity checker shown in Hutton's book. A list of 50 different formulas is created, and the result feeding each formula into both validity checkers is put into a tuple and appended to a list. Another function is created which checks each tuple in the list, and calculates what percentage of the tuples contain the same binary value. 
+
+\begin{minted}{haskell}
+-- Feed formulas from a list to both validity checkers and append the results to a list of tuples
+applyCheckers :: [Formula] -> [(Bool, Bool)]
+applyCheckers [] = []
+applyCheckers (x:xs) = (a,b):applyCheckers xs
+  where a = isTautology x 
+        b = isTaut x
+
+-- compareResults: calculate how many of the results are the same
+compareResults :: [(Bool, Bool)] -> Int -> Int
+compareResults [] counter = counter
+compareResults (x:xs) counter 
+  | a == b = compareResults xs (counter + 1)
+  | otherwise = compareResults xs counter
+    where (a,b) = x
+-- Calculate the percentage of equal results
+calcPercentage :: [(Bool, Bool)] -> Float 
+calcPercentage results = (correct / total) * 100
+  where correct = fromIntegral $ compareResults results 0
+        total = fromIntegral $ length(results)
+
+showPercentage :: Float 
+showPercentage = calcPercentage $ applyCheckers formulae
+\end{minted}
+The testing shows that for all formulas, both checkers give the same output 100\%\ of the time. This increases faith that the implementation is working correctly. 
+\section{Implementing the Tableaux method for Predicate logic}
+\subsection{Data types} 
+To implement tableaux for Predicate logic, we begin by defining our data types to represent the alphabet of Predicate logic. We create a new data type named term to represent variables and functions.
+\begin{minted}{haskell}
+type Var = String 
+data Term = Variable Var | Func (Var, Int) [Term] deriving (Eq)  
+\end{minted}
+Variables are quite straightforward, however function definitions are slightly more complex. Each function is created via the $Func$ constructor which takes a tuple (Var,Int) and a list of terms. The Var represents the name of the function and the Int represents the arity of the function, whereas the list of terms represents the list of arguments the functions take. Functions are defined recursively as functions can take other functions as arguments. 
+Formulas in predicate logic are just an extension of propositional logic and can be represented in Haskell like so: 
+\begin{minted}{haskell}
+--Formula data type
+data Formula = Var Char |
+               Not Formula | 
+               And Formula Formula | 
+               Or Formula Formula | 
+               Imply Formula Formula | 
+               ForAll Var Formula |
+               Exist Var Formula |
+               Pred Var [Term]
+               deriving Eq
+\end{minted}
+The definition for the quantifiers are very similar to the propositional formulas, however they contain a string which denotes the variable bound to the quantifier. The definition for a predicate is also straight forward, a string denoting the name of the predicate and a list of terms the predicate takes as arguments. 
+\subsection{Unification}
+
+
+\section{Discussion}
+\subsection{Summary}
+This dissertation has provided:
+\begin{itemize}
+\item An introduction to propositional and first order logic.
+\item An introduction to some basic concepts in Haskell and why it is the language of choice. 
+\item An explanation of tableau calculus, what they are used for and how they work. 
+\item How a tableau calculus was implemented for propositional logic.
+\item How a tableau calculus was implemented for predicate logic. 
+\end{itemize}
+\subsection{Reflection}
+\subsubsection{Difficulties} Many difficulties were encountered when creating a tableau for both propositional and predicate logic. Beginning with propositional logic, deciding how to represent the tableau posed many difficulties. At first, the decision between representing tableau as a tree data type as defined previously, or a list of lists, where the outer list represented the tree and the inner lists were the branches of the tree,  was to be considered. On first thought it appeared that creating the tableau would be easier using trees, however checking for closedness of a tableau seemed much easier to implement using a list of lists as traversing a tree data structure is much harder than searching for elements in a list. Originally an attempt was made at using a list of lists but this ultimately failed as implementing the expansion rules proved to be a complicated task with nested lists, namely the beta rule. To implement the beta rule with such a data type, a new list would have to have been made every expansion to be added to the already existing nested lists which represented the current tableau, this proved to be hard to implement in a language such as Haskell where one cannot mutate the inputs of a function. Conclusively, a decision was made to attempt to implement the tableau using a tree data structure which came with complications itself. The tree data structure is a recursively defined structure therefore the solution to creating a tableau was also recursive. Recursion is a complicated topic to grasp, especially with unfamiliar datatypes such as a tree as opposed to more commonly used datatypes such as lists. A solution to generating a tableau was made for propositional logic, however then the problem of checking for closed branches arose. Traversing up a tree did not seem to be possible with Haskell, however in the end the two methods were combined. A tree is used to create the tableau, then the branches are collected as a list of lists which then checks for closedness. 
+\subsubsection{Difficulties with first order logic}
+Creating a tableau for predicate logic proved to be more complicated than propositional logic. The ideas behind building the tree were the same. However, the most challenging areas of the implementation for predicate logic seemed to be. 
+\begin{itemize}
+\item Defining correct data types for predicate logic.
+\item Creating a unification algorithm 
+\item Applying the unification algorithm to a tree.
+\item Introducing new parameters and fresh Skolem functions to a tableau 
+\end{itemize}
+\textbf{Defining correct data types} 
+Unlike propositional logic, defining the data types for predicate logic did not seem as trivial. A separate data type had to be created for a term which proved to be slightly confusing, the difference between a Variable and a constant was an issue and it was not first clear how to differentiate between the two. It was not clear if a separate definition should have been made for a Constant and one for a Variable or what exactly counted as a term and how these terms would link with formulas. This took more reading and testing than expected to figure out a data type for both a First-Order logic formula and term. \\\\
+\textbf{Creating a unification algorithm} Creating an algorithm for unification was challenging as when dealing with predicates there were cases where variables inside predicates needed to be changed, this resulted in functions which needed to recurse not only over data types but also lists within those data types, which may also contain nested lists. Visualising recursion is a tough concept sometimes, and dealing with recursion over multiple types in one go was often difficult.
+\\\\
+\textbf{Applying the unification algorithm}
+Using trees to build the tableau then a list of list to check for a closed tableau \\\\
+\textbf{Introducing new parameters and fresh skolem functions}
+The introduction of new parameters, when applying the gamma rule and the introduction of fresh Skolem functions when applying the beta rule was one of the most difficult tasks. Keeping track of variables and functions was a very time consuming task. In an imperative language, this would not be too difficult as a global counter could be created, or a variable could be updated within a function every time a new parameter or Skolem function is introduced. However in Haskell both of these ideas are not possible to implement in the same way as this is impure. Sometimes others use monads to replicate global variables but due to time constraints, understanding and implementing a feature like that was not possible. The other method would be traversing the tree each time, keeping track of which variables have already been used and use a different one if need be. This posed more issues, firstly it is difficult to traverse trees in Haskell, furthermore counting the amount of variables and Skolem functions used would require some counter to be incremented which is once again not possible, furthermore if it were possible it is not obvious how this information would be used to introduce a new function without passing in extra parameters. In the end, all functions which were used in the tableau creation function had to be changed to carry some counter which was updated each time to get the next variable or skolem function needed, from two other functions which returned a list of fresh parameters and skolem functions. 
+
+\subsubsection{What has been learned}
+During the course of this project, it is now clear that before starting a project such as this it is a good idea to plan a method before writing any code. Many opportunities arose where several functions were made, however something fundamental was forgotten for the last function which encompasses all the smaller functions together which resulted in changes having to be made to previous functions or in some cases be rewritten. It is also critical to have a solid understanding of the mathematical concepts underlying such a project before trying to implement any techniques. 
+\section{Conclusion}
+This dissertation has provided:
+\begin{itemize}
+\item An introduction to propositional and first order logic.
+\item An introduction to some basic concepts in Haskell and why it is the language of choice. 
+\item An explanation of tableau calculus, what they are used for and how they work. 
+\item How a tableau calculus was implemented for propositional logic.
+\item How a tableau calculus was implemented for predicate logic. 
+\item The problems encountered when trying to implement tableau
+\end{itemize}
+\subsection{Future work}
+Given more time improvements could be made. An obvious example would be extending the implementation to other types of logic such as temporal logic. This would require a further understanding of logical concepts such as what temporal logic is, how and why it is used. Further tests would be carried out, comparing results to a state of the art theorem prover such as Z3. However this would require, another program which could translate between the data types defined in this report and the language the Z3 theorem solver uses, knowledge on how to work Z3 would also be needed. To further improve testing, a random formula generator could also be created to allow a bigger quantity of formulas to be tested. This was an idea earlier on in the project however, as stated previously, random numbers do not function the same in Haskell as imperative languages as randomness is not pure. More knowledge on monads would perhaps be needed or a deeper understanding of the Haskell language in general. 
+
+\end{document}
