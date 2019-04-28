@@ -3,6 +3,54 @@ import Trees
 import Debug.Trace
 
 type Subst = [(Term,Term)]
+createPredF :: Formula->Tree Lf
+createPredF f = predTableaux (createNode f) 0 (freshvars,skolems)
+getSub :: Tree Lf -> Subst
+getSub t 
+  | resTree (treeliterals (branch t) []) [] /= Nothing = resMaybe (resTree (treeliterals (branch t) []) [])
+  | otherwise = []
+
+isTautPred :: Formula -> Bool
+isTautPred f = tableauxIsClosed branches
+  where tree = createPredF f
+        sub = getSub tree
+        unifiedTree = unify sub tree
+        branches = branch unifiedTree
+
+-- resolve a tree
+resTree :: [[Formula]] -> Subst -> Maybe Subst 
+resTree [[]] sub = Just sub
+resTree [] sub = Just sub 
+resTree (x:xs) sub
+  | resolve x == Nothing = Nothing 
+  | otherwise = resTree xs ((resMaybe (resolve x)) ++ sub)
+-- resolve: try to close a branch 
+resolve :: [Formula] -> Maybe Subst
+resolve [] = Nothing
+resolve t@(x:xs) 
+  | xs == [] = resolve $ filter (\x' -> x' /= x) t
+  | substitution /= Nothing = substitution
+  | substitution == Nothing = resolve $ filter (\x' -> x' /= (head xs)) t
+    where terms = res' x (head xs)
+          substitution = mgu (Just terms) (mgu' terms [])
+
+uni = [[Pred "P" [Func ("g",0) []],Not (Pred "P" [Func ("f",0) []]), Pred "P" [Variable "X"]],[Pred "P" [Func ("g",0) []],Not (Pred "P" [Func ("f",0) []]), Pred "P" [Variable "X"]]]
+
+res' :: Formula -> Formula -> Subst 
+res' f1 f2 
+  | length t1 == length t2 = zip t1 t2 
+  | otherwise =[]
+  where t1 = predTerms f1 
+        t2 = predTerms f2 
+isPred :: Formula -> Bool
+isPred (Pred _ _ ) = True
+isPred (Not(Pred _ _ )) = True
+isPred x = False 
+
+predTerms :: Formula -> [Term]
+predTerms (Pred x t) = t
+predTerms (Not (Pred x t)) = t
+predTerms f = []
 
 --Unify :: apply unfier to tree 
 unify :: Subst -> Tree Lf -> Tree Lf 
