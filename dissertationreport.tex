@@ -33,13 +33,19 @@ This report aims to formalise a tableau for propositional and predicate logic, u
 Dutch logician Evert William Beth created the method of analytical tableau in 1955 as a proof procedure. However, before discussing tableau, the field of Logic must be introduced.
 Logic is a field of mathematics that plays a significant role in many aspects of Computer Science. As a mathematical field, it dates back to its inventor, Aristotle, and remained largely the same until the 20th century, where logic saw many advancements that lead to the development of formal systems such as predicate logic. \\
 Logic boasts an array of practical uses; circuit design, computability theory and solvers such as model checkers. It is a vast subject area; however, this report will focus on studying and implementing the method of analytic tableaux; a proof procedure for logical formulas.\\
-In logic, sentences are built which are evaluated to true or false values, such sentences to reason about the world - or more specifically a domain. For example, "It is raining outside" could be expressed using a logical formula; however, logic is unable to reason about more ambiguous or subjective sentences such as "That bed is too small.". This is unsurprising as logic is fundamentally a mathematical concept, and in the field of mathematics ideas such as ambiguity and subjectivity are not desirable. By combining sentences with connectives, more lengthy formulas can be built. These connectives can include but are not limited to: and; or; not; imply. Computer scientists are concerned with both truth and falsity values of such sentences as well as identifying methods to discern whether the formula in question is or can be true, perhaps even always true? Such an answer to that question is called a proof. Proof procedures are a way of deducing proofs from a logical formula. There are many widely used proof procedures that have been created, such as the Z3 theorem prover from Microsoft Research, CVC4 or Vaapire.\subsubsection{Individual contributions}
+In logic, sentences are built which are evaluated to true or false values, such sentences to reason about the world - or more specifically a domain. For example, "It is raining outside" could be expressed using a logical formula; however, logic is unable to reason about more ambiguous or subjective sentences such as "That bed is too small.". This is unsurprising as logic is fundamentally a mathematical concept, and in the field of mathematics ideas such as ambiguity and subjectivity are not desirable. By combining sentences with connectives, more lengthy formulas can be built. These connectives can include but are not limited to: and; or; not; imply. Computer scientists are concerned with both truth and falsity values of such sentences as well as identifying methods to discern whether the formula in question is or can be true, perhaps even always true? Such an answer to that question is called a proof. Proof procedures are a way of deducing proofs from a logical formula. There are many widely used proof procedures that have been created, such as the Z3 theorem prover from Microsoft Research, CVC4 or Vaapire.
+
+\subsubsection{Individual contributions}
 The aim of this report is to provide a solid introductory explanation of Propositional and First-Order-Logic, the Haskell programming language and the method of analytical tableau. This main section of this report will detail the basic ideas behind both logical languages, fundamental concepts of functional programming and how tableau are created. Further it will detail a Haskell implementation to the following problems:
 \begin{enumerate}
 \item A representation of both predicate and propositional logic in Haskell.
 \item An implementation for creating a Tableau for propositional logic, detailing the methods used to create the Tableau, the structure of the Tableau and the different functional programming concepts that were used to create the Tableau.
+\item Implementing a unification algorithm for formulas.
+\item Implementing a substitution algorithm for formulas.
 \item An implementation for creating a Tableau for first-order logic. It will outline the same problems faced for propositional logic but adapted for first-order logic as well as an algorithm for unification, including what unification is and why it is needed for first-order logic tableau. 
 \end{enumerate}
+\subsection{Context for the contributions}
+Both the unification and substitution algorithm are sub problems that need to be solved in order to create tableau for first-order logic. The implementations are outlined in the main area of the report which details the entire implementation process for creating a tableau for first-order logic. 
 
 
 \subsection{Research question}
@@ -52,6 +58,18 @@ Propositional logic is a branch of logic that allows conclusions to be derived f
 For any given propositional formula we can assign True or False values to each atomic sentence, it is these binary values of the atomic sentence coupled with connectives which determine the value of the entire formula for which the atomic sentences create.\\ 
 For example, taking the compound sentence, $s$, \textit{"The sky is blue and water is wet"}, there are two atomic sentences \textit{"The sky is blue"} and \textit{"water is wet"} which can be named $p$ and $q$ respectively. Let us assign values of \textit{true} to both $p$ and $q$ and sentence $s$  \\  
 These true or false values assigned to such atomic sentences are called a \textit{model}. We are often concerned with whether there is a model for a given formula that would result in the formula being true, or whether every model yields a true result. Such a formula is called a \textit{tautology} which is explained in \textbf{3.1.2}.
+\begin{figure}[h]
+\hfill
+\subfigure[Conjunction truth table]{\includegraphics[width=5cm]{and.png}}
+\hfill
+\subfigure[Disjunction truth table]{\includegraphics[width=5cm]{or.png}}
+\hfill
+\subfigure[Implication truth table]{\includegraphics[width=5cm]{implies.png}}
+\hfill
+\subfigure[Negation truth table]{\includegraphics[width=5cm]{not.png}}
+\hfill
+\caption{Truth tables for boolean operators }
+\end{figure}
 \subsubsection{Syntax of propositional logic}
 As with all languages, propositional logic has a well-defined syntax and semantics. 
 \begin{definition}
@@ -72,7 +90,8 @@ Formulas
 For all p $\in$ P.
 \end{enumerate}
 \subsubsection{Tatuologies}
-A tautology is a logical statement which yields a true value for every given model. In other words it is always true. An example of such a sentence in plain English could be \textit{'"I am a man or I am not a man"} which could be expressed as $p \lor \neg{p}$ in propositional logic.
+A tautology is a logical statement which yields a true value for every given model. In other words it is always true. An example of such a sentence in plain English could be \textit{'"I am a man or I am not a man"} which could be expressed as $p \lor \neg{p}$ in propositional logic. Tautologies are \textit{valid}. 
+
 
 \subsection{Predicate logic}
 
@@ -80,7 +99,7 @@ Predicate logic, also known as first-order logic, builds on the ideas of express
 
 \subsubsection{Syntax of predicate logic}
 \begin{definition}
-Alphabet of Predicate logic contains 
+Alphabet 
 \end{definition}
 \begin{enumerate}
 \item A set of countably infinite $V$ of variables. 
@@ -122,23 +141,17 @@ Free and bound variables.
 Given the formula $\forall{x}(P(x) \implies P(y))$ we say the variable x is bound and y is free. 
 \end{exmp}
 \begin{exmp}
-To compute the free variables in a given formula we define the following Haskell function, fV: 
+Computing the free variables of a formula. 
 \end{exmp}
-\begin{minted}{haskell}
--- Compute all Free Variables in a FOL formula
-fV :: Formula -> [Term]
-fV (Var x) = [Variable [x]]
-fV (Pred x t) = occuranceA t
-fV (Not x) = fV x
-fV (Imply x y) = fV x ++ fV y
-fV (And x y) =  fV x ++ fV y
-fV (Or x y) =  fV x ++ fV y
-fV (ForAll x f) = filter (\y -> y /= (Variable x)) (fV f)
-fV (Exist x f) = filter (\y -> y /= (Variable x)) (fV f)
-\end{minted}
+\begin{figure}[h!]
+\centering
+\includegraphics[scale=1]{freevar.png}
+\caption{Algorithm to compute the free variables in a formula} \cite{struth_2019}
+\label{fig:expansionrules}
+\end{figure}
 \subsection{The Haskell programming language}
 \subsubsection{Introduction to Haskell}
-All Haskell concepts mentioned below are based on Graham Hutton’s book \cite{hutton_2007}, Introduction to Haskell. Haskell is a pure, lazy, declarative, functional programming language developed in 1987 by an international committee of programming language researchers. A pure language is one which has no side effects where a side effect is an action which affects some internal state which value is then used to produce an output. Internal states like this do not occur in Haskell; this means that every call of some function with the same parameters will always yield the same results. The result of a function is fully dependent on the parameters passed to it and nothing else; we can also say that its value can replace any function call anywhere in the program and the meaning of the program will not change. \\\\
+All Haskell concepts mentioned below are based on Graham Hutton’s book \cite{hutton_2007}, Introduction to Haskell and \cite{learnyouahaskell}. Haskell is a pure, lazy, declarative, functional programming language developed in 1987 by an international committee of programming language researchers. A pure language is one which has no side effects where a side effect is an action which affects some internal state which value is then used to produce an output. Internal states like this do not occur in Haskell; this means that every call of some function with the same parameters will always yield the same results. The result of a function is fully dependent on the parameters passed to it and nothing else; we can also say that its value can replace any function call anywhere in the program and the meaning of the program will not change. \\\\
 Given the function:\\
 \begin{minted}{haskell}
 double :: Int -> Int 
@@ -153,19 +166,21 @@ Examples of impure actions include:
 \end{enumerate}
 Haskell is a lazy language, which means Haskell only evaluates expressions when asked. For example, in an eager language (opposite of lazy) if asked to compute a list of all the square numbers up to 1000, it will compute every square number up to 1000 put each number in a list and then store that list. However, in a lazy language the square values will not be calculated until or unless a specific value or values are explicitly asked for. This allows for structures such as infinite lists to be created in Haskell and other lazy languages.\\\\
 \subsection{Declarative verus Imperative}
-Programming languages are tools used to solve problems. Declarative programming, a feature of Haskell, is a style of building solutions to problems by concerning itself on "What to do to solve the problem" not "How to solve the problem". To understand this explanation it is best to look at an example. Defining a function in python, an imperative language, that removes the number 5 from a list of numbers: 
+Programming languages are tools used to solve problems. Declarative programming, a feature of Haskell, is a style of building solutions to problems by concerning itself on "What to do to solve the problem" not "How to solve the problem". To understand this explanation it is best to look at an example. Defining a function in python, an imperative language, that adds 5 to a list of numbers: 
 \begin{minted}{python}
-def removeFive(numbers): 
+def addFive(numbers): 
 for (i in range len(numbers): 
-  if numbers[i] == 5
+  numbers[i] = numbers[i] + 5
+ return(numbers)
+  	
 \end{minted}
-Our function $removeFive$ explains "How", we can define our function at a high level as: "Take a list of numbers, iterate through the list, if the number five is found remove it from the list otherwise leave the number in the list and carry on until all elements in the list have been checked and return the resulting list"\\
+Our function $addFive$ explains "How", we can define our function at a high level as: "Take a list of numbers, iterate through the list, for each number, $i$, replace it with $i+5$, and continue until all numbers $i$ have been visited then return the list of numbers. "\\
 However, defining a similar function in Haskell would require a different approach:
 \begin{minted}{haskell}
-removeFive :: [Int] -> [Int]
-removeFive numbers = filter (\x -> x /= 5) numbers 
+addFive :: [Int] -> [Int]
+addFive numbers = map (\x -> x + 5) numbers 
 \end{minted}
-At a high level this function can be read as, "Remove (filter) all numbers in our list that equal 5". This is the difference between the two styles.
+The function $addFive$ in Haskell is explaining "what" to do, at a high level this function can be read as, "Apply the function (x+5) for all numbers, $x$," or more simply "Add 5 to each number in the list". \\\\
 Functions in Haskell take one or more arguments and produce a single result. 
 Consider the following Haskell function AddTwo: 
 \begin{myFunctionStyle}
@@ -194,7 +209,7 @@ data Maybe a = Nothing | Just a
 This provides a way of dealing with error conditions, it is used in cases where functions have an error condition. These are used in the unification algorithm detailed in \textbf{section 4.4} and \textbf{section 6.5}. 
 %% ALGEBRAIAC DATA TYPES
 \subsubsection{Algebraic data types and Prop data type}
-It is possible to create data types in Haskell, as well as algebraic data types. Algebraic data types are types which can be created by combining other types together.
+It is possible to create data types in Haskell, as well as algebraic data types \cite{learnyouahaskell}. Algebraic data types are types which can be created by combining other types together.
 Data types in Haskell are formed by writing the keyword \begin{myKeyWordStyle}data\end{myKeyWordStyle} followed by the name of the data type and zero or more constructor(s). The name of the data type and constructors(s) must begin with a capital letter.
 Examples of different data types in Haskell.
 \begin{enumerate}
@@ -237,7 +252,7 @@ Functions in Haskell make great use of pattern matching to access data, there ar
  baseCase [] _ = [] 
 \end{minted}
 The second line can be read as "If an empty list is passed to our function baseCase regardless of what Int is passed in return an empty list.
-\item Pipe syntax. The symbol $\vert$ is used to replace if statements pipes are followed by predicates and if the predicate is evaluated to true the function outputs the value on the righthand side of the predicate. An example: 
+\item Guards. The symbol $\vert$ is used to replace if statements guards are followed by predicates and if the predicate is evaluated to true the function outputs the value on the righthand side of the predicate. An example: 
 \begin{minted}{haskell}
 findFive :: [Int] -> Int 
 findFive [] = -1
@@ -245,7 +260,7 @@ findFive (x:xs)
   | x == 5 = x
   | otherwise = findFive xs 
 \end{minted}
-The function "findFive" is a recursive function which searches for a 5 in a list and outputs the number 5 if it is found and -1 otherwise. Whilst this function may not have much practical use we can see how the pipe syntax works. In our first condition our predicate $x==5$ is evaluated and if it is true $x$ is output, which will be 5. Our "otherwise" condition is more syntactic sugar which always evaluates to true, this can be thought of as if all previous cases fail then output some result. 
+The function "findFive" is a recursive function which searches for a 5 in a list and outputs the number 5 if it is found and -1 otherwise. Whilst this function may not have much practical use we can see how the guards work. In our first condition our predicate $x==5$ is evaluated and if it is true $x$ is output, which will be 5. Our "otherwise" condition is more syntactic sugar which always evaluates to true, this can be thought of as if all previous cases fail then output some result. 
 \end{itemize}
 \section{Tableaux calculi}
 As stated previously, the method of analytic tableau is a proof procedure. It proves the validity of formulas by method of proof by contradiction, that is given some formula $f$, $\neg{f}$ is input into the tableau and attempt to show $\neg{f}$ is invalid therefore proving that $f$ must be valid.\\ 
@@ -336,6 +351,8 @@ $\delta(f(x_1,...,x_n)$ \\ where f is a new function symbol and $x_1,...,x_n$ th
 \caption{Updated delta rule, taken from wikipedia \cite{wikipediatableau}}
 \label{tab:deltarule}
 \end{table}\\
+
+\subsection{Example of a tableau tree for predicate logic}
 
 Suppose we have a branch $\theta$ which contains the formulas \{ P(x'), $\neg$P(f(c)) \}, it is clear to see branch $\theta$  can be closed by substituting the variable $x'$ with $f(c)$, our mechanism for doing such a substitution is called unification. 
 \subsection{Unification}
@@ -596,14 +613,24 @@ freshvars = ["v"++show(x)| x <- [1..]]
 
 skolems = ["f"++show(x) | x <- [1..]]
 \end{minted}
-We then define a function which takes the name of a skolem function, calculates the arity and attaches the arity to that skolem function. The free variables of our existential formula are calculated the auxiliary function fV defined in \textbf{section 3.3}
+We then define a function which takes the name of a skolem function, calculates the arity and attaches the arity to that skolem function.
 \begin{minted}{haskell}
+-- Compute all Free Variables in a FOL formula
+fV :: Formula -> [Term]
+fV (Var x) = [Variable [x]]
+fV (Pred x t) = occuranceA t
+fV (Not x) = fV x
+fV (Imply x y) = fV x ++ fV y
+fV (And x y) =  fV x ++ fV y
+fV (Or x y) =  fV x ++ fV y
+fV (ForAll x f) = filter (\y -> y /= (Variable x)) (fV f)
+fV (Exist x f) = filter (\y -> y /= (Variable x)) (fV f)
 -- Create skolem function
 skolemFunc :: Formula -> String -> Term
 skolemFunc f s  = Func (s, length(freeVars)) freeVars
   where freeVars = fV f
 \end{minted}
-
+ The free variables of our existential formula are calculated using the auxiliary function fV which is an implementation of the algorithm outlined in \textbf{section 3.3}.
 \subsection{Expansion rules and creating the tree}
 The functions expandNode, rules and createTableaux stay largely the same as the definitions in propositional logic. However, these functions have been extended to receive a counter to keep track of the current variable and skolemn functions that have been introduced. In order to implement the expansion rules for first-order logic, there must be a mechanism to introduce fresh skolem functions for the beta rule and new parameters for the gamma rule. We must also define a function to replace all instances of "x" with said variable or skolem function. \\
 To replace bound variables in a formula we define a function subst:
@@ -758,17 +785,37 @@ isTautPred f = tableauxIsClosed branches
 The function $createPredF$, takes a formula and creates a tableaux with the initial counter set to 0 and a tuple containing the list of free variables and new Skolem functions whereas the getSub function takes a tree and returns a substitution used to attempt to close the tree. Finally, $isTautPred$ computes a tree, $t$, from $createPredF$; computes a substitution, $s$, using $getSub$; then applies the $s$ to the tree $t$ to form a new tree $t'$; the branches of $t'$ are collected and passed to $tableauxIsClosed$ which displays whether the original formula is valid or invalid. 
 
 
-\subsection{Testing and evaluation}
+\subsection{Testing}
 In order to test tableaux for predicate logic, firstly the unification algorithm was tested. The tests were quite simple, examples of sets of terms having the unification algorithm carried out on them were found \cite{struth_2019} and the same formulas were input into the Haskell implementation and the results were compared. The algorithm was tested for different criteria which included:
 \begin{enumerate}
-\item Can 
+\item Do substitutions of the form x->x get deleted?;
+\item Can two of the same function with different arguments be unified;
+\item Does the algorithm fail when unifying two functions with different names and different arity. 
+\item Does the algorithm fail trying to unify terms such as x and f(x);
+\item Are terms in the substitution replaced with x when unifying x->t. (The final rule in the algorithm) 
 \end{enumerate}
-
-\subsubsection{Testing the unification algorithm}
-After implementing the unification algorithm, sets of formulas found in Struth's Logic in Computer Science \cite{struth_2019} were tested and compared to the results fund in said 
-
+After testing the implementation and comparing it to worked examples \cite{struth_2019} there were no mistakes, example substitutions which fit the criteria were also made up, as well as testing cases such as empty lists, and sets of terms with varying sizes. These tests could have been improved by increasing the amount of sets of formulas tested, 
 \subsubsection{Evaluation}
-Overall, whilst the testing did produce positive results it is evident that the tests were not rigorous enough. Due to time constraints, the amount of data used to test the functions was quite small
+Overall, whilst the testing did produce positive results it is evident that the tests were not rigorous enough. Due to time constraints, the amount of data used to test the functions was quite small. This increases the likelihood that there are cases which have not been tested which could result in the program failing. The program also has issues with introducing new variables and fresh skolem functions, certain formulas give unexpected results. For example, when testing the tautology $\forall{x.f} \lor \neg\forall{x.f}$. Ideally the program would produce a single branch containing the literals \{$P(x_1), \neg{P(f_1)}$\} which would then be unified with the substitution $x_1->f_1$ however the literals produced are \{$P(x_16), \neg{Pf_3}$\}. These unusual results do not cause an issue with the given example as the tableau can still be closed with the substitution $x_16 -> f_3$ the uncertainty of the behaviour of the program is cause for concern as it is likely there may be an example for which it does not work. Although, with the formulas tested no example was found for which the incorrect result was given.\\
+However, the testing for predicate logic did help with identifying major bugs in the program. At first, the unification algorithm only computed the unifier for a set of terms once instead of applying the algorithm recursively until no more rules applied. This bug was discovered when the unifier returned by the program returned different results than the examples \cite{struth_2019} with the same input however the output the program returned was equal to the first step shown by the worked examples. 
+Improvements that applied to testing for propositional logic also apply for predicate logic, for example a function which produced randomised formulas for propositional logic
+The application of the unification algorithm could have been planned better, the ideal scenario for the application would be:
+\begin{enumerate}
+\item Create the tableaux as a tree data structure;
+\item Compute a unifier using the tree;
+\item Apply the unifier to the tree;
+\item Check for closed branches. 
+\end{enumerate}
+Although, the application works more like this: 
+\begin{enumerate}
+\item Create the tableaux as a tree data structure;
+\item Convert the branches of the tree to a list of lists;
+\item Compute the unifier from the list of lists;
+\item Apply the unifier to the original tree;
+\item Convert the branches of the unified tree to a list of lists;
+\item Check for closed branches.
+\end{enumerate}
+This sequence of steps is quite long winded, it includes a lot of converting from trees to nested lists to trees again to nested lists. This is due to the fact that in the beginning it was easier to create the tableau as a tree data structure but check for closed tableau using nested lists. However, the decision to use two data structures was created only with propositional logic in mind which does not require any unification algorithm. Therefore, a lack of foresight coupled with time constraints lead to a long winded solution to computing tableaux for predicate logic. This illustrates the fact that perhaps a more thorough plan should have been created with both propositional and predicate logic in mind. Even though the program gives promising results, there is most likely are some unnecessary steps in computing a tableau for predicate logic which may hinder performance for larger formulas. 
 \section{Discussion}
 \subsection{Summary}
 This dissertation has provided:
@@ -780,7 +827,8 @@ This dissertation has provided:
 \item How a tableau calculus was implemented for predicate logic. 
 \end{itemize}
 \subsection{Reflection}
-\subsubsection{Difficulties with propositional logic.} Many difficulties were encountered when creating a tableau for both propositional and predicate logic. \\ 
+\subsubsection{Difficulties with propositional logic.} 
+Many difficulties were encountered when creating a tableau for both propositional and predicate logic. \\ 
 Beginning with propositional logic, deciding how to represent the tableau posed many difficulties. At first, the decision between representing tableau as a tree data type as defined previously, or a list of lists, where the outer list represented the tree and the inner lists were the branches of the tree,  was to be considered. At first it appeared that creating the tableau would be more practical using trees, however checking for closedness of a tableau seemed much more practical to implement using a list of lists as traversing a tree data structure is much more challenging than searching for elements in a list. \\
 Originally an attempt was made at using a list of lists but this ultimately failed as implementing the expansion rules proved to be a complicated task with nested lists, namely the beta rule. That is because, to implement the beta rule with such a data type, a new list would have to have been made every expansion to be added to the already existing nested lists which represented the current tableau, which proved to be problematic to implement in a language such as Haskell where one cannot mutate the inputs of a function. \\ 
 Ultimately, a decision was made to attempt to implement the tableau using a tree data structure which came with complications itself. \\\\
@@ -796,31 +844,20 @@ Creating a tableau for predicate logic proved to be more complicated than propos
 \textbf{Defining correct data types} 
 Unlike propositional logic, defining the data types for predicate logic did not seem as trivial. A separate data type had to be created for a term which proved to be slightly confusing, the difference between a Variable and a constant was an issue and it was not first clear how to differentiate between the two. It was not clear if a separate definition should have been made for a Constant and one for a Variable or what exactly counted as a term and how these terms would link with formulas. More reading and testing was needed than expected to create a data type for both a First-Order logic formula and term. \\\\
 \textbf{Creating a unification algorithm} Creating an algorithm for unification was challenging as when dealing with predicates there were cases where variables inside predicates needed to be changed, this resulted in functions which needed to recurse not only over data types but also lists within those data types, which may also contain nested lists. Visualising recursion is a tough concept sometimes, and dealing with recursion over multiple types in one go was often difficult.
-\\\\
-\textbf{Applying the unification algorithm}
-Using trees to build the tableau then a list of list to check for a closed tableau \\\\
-\textbf{Introducing new parameters and fresh Skolem functions}
-Using trees to build the tableau rather than a list of list to check for a closed tableau \\\\
 \textbf{Introducing new parameters and fresh Skolem functions}
 The introduction of new parameters, when applying the gamma rule and the introduction of fresh Skolem functions when using the beta rule were challenging tasks. Keeping track of variables and functions was a very time-consuming task. In an imperative language, this would not be too difficult as a global counter could be created, or a variable could be updated within a function upon introduction of a new parameter or Skolem function. However, in Haskell, both of these ideas are not possible to implement in the same way as a global variable would mean the result of the function would be dependent on something other than the parameters which would result in an impure function.\\ 
 Emulating global variables is possible using monads although due to time constraints, a lack of understanding of monads and implementing a feature like that was not possible. \\ 
 Another method would be traversing the tree each time, keeping track of which variables have already been used and use a different one if need be although this posed more issues.\\
  Firstly it is impossible to search up a tree in Haskell, furthermore counting the number of variables and Skolem functions used would require some counter to be incremented which is once again not possible, moreover if it was possible it is not apparent how this information would be used to introduce a new function without passing in extra parameters. In the end, all functions which were used in the tableau creation function had to be changed to carry some counter which was updated each time to get the next variable or Skolem function needed, from two other functions which returned a list of fresh parameters and Skolem functions. 
 \subsubsection{What has been learned}
-During the course of this project, it became clear that before commencing such a project a method planning task should be undertaken before writing any code. Many scenarios arose where several functions were made to create a larger function. However, something fundamental was forgotten in respect of the larger function which encompasses all the smaller functions together, requiring changes having to be made to previous functions or in some cases rewritten. It is also critical to have a solid understanding of the mathematical concepts underlying such a project before trying to implement any techniques. 
+During the course of this project, it became apparent that before commencing such a project a method planning task should be undertaken before writing any code. Many scenarios arose where several functions were made to create a larger function. However, something fundamental was forgotten in respect of the larger function which encompasses all the smaller functions together, requiring changes having to be made to previous functions or in some cases rewritten. It is also critical to have a solid understanding of the mathematical concepts underlying such a project before trying to implement any techniques. 
 \section{Conclusion}
-This dissertation has provided:
-\begin{itemize}
-\item An introduction to propositional and first order logic.
-\item An introduction to some basic concepts in Haskell and why it is the language of choice. 
-\item An explanation of tableau calculus, what they are used for and how they work. 
-\item How a tableau calculus was implemented for propositional logic.
-\item How a tableau calculus was implemented for predicate logic. 
-\item The problems encountered when trying to implement tableau
-\end{itemize}
+Conclusively, this project has produced a program which can build a tableau calculus for statements in both propositional and predicate logic; this included the implementation of, the expansion rules for tableaux calculus \cite{fitting_2013}, a unification algorithm, a substitution algorithm. The program takes a formula as an input, places the negation of the formula at the root of the tree, and a corresponding tableau is built using the defined rules, the tree is then checked for a contradiction and returns a value depending on whether the program believes the original formula is valid or not. \\\\Currently, the program works for all inputs that have been tested; however, testing could have been improved to increase the likelihood of the implementation being correct. Many difficulties were faced, more so with predicate logic than propositional however this is to be expected as creating a tableau for predicate logic was an extension of propositional logic. \\\\
+The main issues were introducing fresh variables and new Skolem functions. 
+Currently, the program is able to add new variables and new parameters when dealing with predicate logic; however the variables, while unique, are not always the expected variables. Ideally,  tests would be carried out, comparing results to a state of the art theorem prover such as Z3. However, this would require, another program which could translate between the data types defined in this report and the language the Z3 theorem solver uses, knowledge on how to work Z3 would also be needed. These additional tests could be applied to both propositional and predicate logic. \\
+Overall, the project has been a success with a large amount of the original goals being achieved with the current tests showing promising results.
 \subsection{Future work}
-Given more time improvements could be made. An obvious example would be extending the implementation to other types of logic such as temporal logic. This extension would require a further understanding of logical concepts such as what temporal logic is, how and why it is used. Additional tests would be carried out, comparing results to a state of the art theorem prover such as Z3. However, this would require, another program which could translate between the data types defined in this report and the language the Z3 theorem solver uses, knowledge on how to work Z3 would also be needed. To further improve testing, a random formula generator could also be created to allow a larger quantity of formulas to be tested. A random formula generator was an idea earlier on in the project; however, as stated previously, random numbers do not function the same in Haskell as imperative languages as randomness is not pure. More knowledge on monads would perhaps be needed or a deeper understanding of the Haskell language in general. 
-
+Given more time improvements could be made. An obvious example would be extending the implementation to other types of logic such as temporal logic. This extension would require a further understanding of logical concepts such as what temporal logic is and its use. To further improve testing, a random formula generator could also be created to allow a larger quantity of formulas to be tested. A random formula generator was an idea earlier on in the project; however, as stated previously, random numbers do not function the same in Haskell as imperative languages as randomness is not pure. More knowledge on monads would perhaps be needed or a deeper understanding of the Haskell language in general. Additionally, both propositional and predicate logic tableau could be combined in one function which identifies the user input as either a propositional or predicate logic statement and computes the appropriate tableau, checking for invalid inputs before starting. Another improvement could be creating a user interface to visually display the tableau to give a clear understanding of the steps although this could become impractical with longer formulas as the size of the tree produced would increase massively. 
 \bibliography{bibliography}
 \bibliographystyle{ieeetr}
 \end{document}
